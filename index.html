@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobPing</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f0f0f, #1a1a2e);
+  color: white;
+}
+
+header {
+  padding: 20px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: bold;
+  background: rgba(0,0,0,0.4);
+}
+
+.container {
+  padding: 20px;
+  max-width: 500px;
+  margin: auto;
+}
+
+.card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 15px;
+  padding: 15px;
+  margin-top: 15px;
+  animation: fadeIn 0.5s ease;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(90deg, #00c853, #00e676);
+  color: white;
+  font-weight: bold;
+}
+
+.job {
+  background: rgba(255,255,255,0.08);
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.featured {
+  border: 2px solid gold;
+}
+
+a {
+  color: #00e676;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+}
+
+@keyframes fadeIn {
+  from {opacity:0; transform: translateY(10px);}
+  to {opacity:1; transform: translateY(0);}
+}
+</style>
+</head>
+
+<body>
+
+<header>⚡ JobPing</header>
+
+<div class="container">
+
+<div class="card">
+  <h3>Post a Job</h3>
+  <input id="title" placeholder="Job title">
+  <textarea id="desc" placeholder="Description"></textarea>
+  <input id="location" placeholder="Location">
+  <input id="pay" placeholder="Pay">
+  <input id="contact" placeholder="WhatsApp (267...)">
+
+  <label>
+    <input type="checkbox" id="featured">
+    🔥 Featured (paid boost)
+  </label>
+
+  <button onclick="addJob()">Post Job</button>
+</div>
+
+<div class="card">
+  <h3>Live Jobs</h3>
+  <div id="jobs"></div>
+</div>
+
+</div>
+
+<footer>
+Made by Kyrie Chirombedzi
+</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD...",
+  authDomain: "jobping-21275.firebaseapp.com",
+  projectId: "jobping-21275"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// format number
+function formatNumber(num) {
+  return num.replace(/\D/g, "");
+}
+
+// post job
+window.addJob = async () => {
+  let contact = document.getElementById("contact").value;
+  let isFeatured = document.getElementById("featured").checked;
+
+  if (!document.getElementById("title").value) {
+    alert("Add job title");
+    return;
+  }
+
+  if (!contact.startsWith("267")) {
+    alert("Use country code (267...)");
+    return;
+  }
+
+  await addDoc(collection(db, "jobs"), {
+    title: document.getElementById("title").value,
+    desc: document.getElementById("desc").value,
+    location: document.getElementById("location").value,
+    pay: document.getElementById("pay").value,
+    contact: contact,
+    featured: isFeatured,
+    createdAt: Date.now()
+  });
+
+  // clear form
+  document.getElementById("title").value = "";
+  document.getElementById("desc").value = "";
+  document.getElementById("location").value = "";
+  document.getElementById("pay").value = "";
+  document.getElementById("contact").value = "";
+
+  alert("Job posted successfully ✅");
+};
+
+// live feed
+const q = query(
+  collection(db, "jobs"),
+  orderBy("featured", "desc"),
+  orderBy("createdAt", "desc")
+);
+
+onSnapshot(q, (snapshot) => {
+  const container = document.getElementById("jobs");
+  container.innerHTML = "";
+
+  snapshot.forEach((doc) => {
+    const job = doc.data();
+
+    container.innerHTML += `
+      <div class="job ${job.featured ? 'featured' : ''}">
+        <h3>${job.featured ? '🔥 ' : ''}${job.title}</h3>
+        <p>${job.desc || ""}</p>
+        <p>📍 ${job.location || ""}</p>
+        <p>💰 ${job.pay || ""}</p>
+
+        <a href="https://wa.me/${formatNumber(job.contact)}" target="_blank">
+          💬 Chat on WhatsApp
+        </a>
+      </div>
+    `;
+  });
+});
+</script>
+
+</body>
+</html>
