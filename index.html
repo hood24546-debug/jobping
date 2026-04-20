@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobPing</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f0f0f, #1a1a2e);
+  color: white;
+}
+
+header {
+  padding: 20px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: bold;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+}
+
+.container {
+  padding: 20px;
+  max-width: 500px;
+  margin: auto;
+}
+
+.card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  padding: 15px;
+  margin-top: 15px;
+  animation: fadeIn 0.5s ease;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #00c853, #00e676);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  transform: scale(1.03);
+}
+
+.job {
+  background: rgba(255,255,255,0.08);
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 10px;
+  animation: fadeIn 0.4s ease;
+}
+
+.featured {
+  border: 2px solid gold;
+  box-shadow: 0 0 10px gold;
+}
+
+a {
+  display: inline-block;
+  margin-top: 8px;
+  color: #00e676;
+}
+
+footer {
+  text-align: center;
+  margin-top: 30px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+@keyframes fadeIn {
+  from {opacity:0; transform: translateY(10px);}
+  to {opacity:1; transform: translateY(0);}
+}
+</style>
+</head>
+
+<body>
+
+<header>⚡ JobPing</header>
+
+<div class="container">
+
+<div class="card">
+  <p id="user">Not logged in</p>
+  <button onclick="login()">Login with Google</button>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<div class="card">
+  <h3>Post a Job</h3>
+  <input id="title" placeholder="Job title">
+  <textarea id="desc" placeholder="Description"></textarea>
+  <input id="location" placeholder="Location">
+  <input id="pay" placeholder="Pay">
+  <input id="contact" placeholder="WhatsApp (267...)">
+
+  <label>
+    <input type="checkbox" id="featured">
+    🔥 Featured (paid boost)
+  </label>
+
+  <button onclick="addJob()">Post Job</button>
+</div>
+
+<div class="card">
+  <h3>Live Jobs</h3>
+  <div id="jobs"></div>
+</div>
+
+</div>
+
+<footer>
+Made by Kyrie Chirombedzi
+</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD...",   // keep your real key here
+  authDomain: "jobping-21275.firebaseapp.com",
+  projectId: "jobping-21275",
+  storageBucket: "jobping-21275.appspot.com",
+  messagingSenderId: "440579832823",
+  appId: "1:440579832823:web:5ae6b19914e9c2bed74cf2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+let currentUser = null;
+
+// LOGIN
+window.login = async () => {
+  await signInWithPopup(auth, provider);
+};
+
+// LOGOUT
+window.logout = () => {
+  signOut(auth);
+};
+
+// TRACK USER
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  document.getElementById("user").innerText =
+    user ? "👤 " + user.displayName : "Not logged in";
+});
+
+// FORMAT NUMBER
+function formatNumber(num) {
+  return num.replace(/\D/g, "");
+}
+
+// POST JOB
+window.addJob = async () => {
+  if (!currentUser) {
+    alert("Login first");
+    return;
+  }
+
+  let contact = document.getElementById("contact").value;
+  let isFeatured = document.getElementById("featured").checked;
+
+  if (!contact.startsWith("267")) {
+    alert("Use country code (267...)");
+    return;
+  }
+
+  if (isFeatured) {
+    alert("To feature this job, contact admin for payment.");
+  }
+
+  await addDoc(collection(db, "jobs"), {
+    title: document.getElementById("title").value,
+    desc: document.getElementById("desc").value,
+    location: document.getElementById("location").value,
+    pay: document.getElementById("pay").value,
+    contact: contact,
+    userName: currentUser.displayName,
+    featured: isFeatured,
+    createdAt: Date.now()
+  });
+
+  // clear inputs
+  document.getElementById("title").value = "";
+  document.getElementById("desc").value = "";
+  document.getElementById("location").value = "";
+  document.getElementById("pay").value = "";
+  document.getElementById("contact").value = "";
+};
+
+// LIVE FEED
+const q = query(
+  collection(db, "jobs"),
+  orderBy("featured", "desc"),
+  orderBy("createdAt", "desc")
+);
+
+onSnapshot(q, (snapshot) => {
+  const container = document.getElementById("jobs");
+  container.innerHTML = "";
+
+  snapshot.forEach((doc) => {
+    const job = doc.data();
+
+    container.innerHTML += `
+      <div class="job ${job.featured ? 'featured' : ''}">
+        <h3>${job.featured ? '🔥 ' : ''}${job.title}</h3>
+        <p>${job.desc || ""}</p>
+        <p>📍 ${job.location || ""}</p>
+        <p>💰 ${job.pay || ""}</p>
+        <p>👤 ${job.userName}</p>
+
+        <a href="https://wa.me/${formatNumber(job.contact)}" target="_blank">
+          💬 Chat on WhatsApp
+        </a>
+      </div>
+    `;
+  });
+});
+</script>
+
+</body>
+</html>
