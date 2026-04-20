@@ -31,7 +31,6 @@ header {
   border-radius: 15px;
   padding: 15px;
   margin-top: 15px;
-  animation: fadeIn 0.5s ease;
 }
 
 input, textarea {
@@ -73,11 +72,7 @@ footer {
   text-align: center;
   margin-top: 20px;
   font-size: 12px;
-}
-
-@keyframes fadeIn {
-  from {opacity:0; transform: translateY(10px);}
-  to {opacity:1; transform: translateY(0);}
+  opacity: 0.7;
 }
 </style>
 </head>
@@ -98,7 +93,7 @@ footer {
 
   <label>
     <input type="checkbox" id="featured">
-    🔥 Featured (paid boost)
+    🔥 Featured
   </label>
 
   <button onclick="addJob()">Post Job</button>
@@ -121,68 +116,38 @@ import {
   getFirestore,
   collection,
   addDoc,
-  onSnapshot,
-  query,
-  orderBy
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD...",
+  apiKey: "AIzaSyD9qx8fcTPDKUUjn-jhPNJEvEWrSFPAPl0",
   authDomain: "jobping-21275.firebaseapp.com",
-  projectId: "jobping-21275"
+  projectId: "jobping-21275",
+  storageBucket: "jobping-21275.appspot.com",
+  messagingSenderId: "440579832823",
+  appId: "1:440579832823:web:e6428a7a16179acbd74cf2"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// format number
-function formatNumber(num) {
-  return num.replace(/\D/g, "");
-}
-
-// post job
+// POST JOB
 window.addJob = async () => {
-  let contact = document.getElementById("contact").value;
-  let isFeatured = document.getElementById("featured").checked;
-
-  if (!document.getElementById("title").value) {
-    alert("Add job title");
-    return;
-  }
-
-  if (!contact.startsWith("267")) {
-    alert("Use country code (267...)");
-    return;
-  }
-
   await addDoc(collection(db, "jobs"), {
     title: document.getElementById("title").value,
     desc: document.getElementById("desc").value,
     location: document.getElementById("location").value,
     pay: document.getElementById("pay").value,
-    contact: contact,
-    featured: isFeatured,
+    contact: document.getElementById("contact").value,
+    featured: document.getElementById("featured").checked,
     createdAt: Date.now()
   });
 
-  // clear form
-  document.getElementById("title").value = "";
-  document.getElementById("desc").value = "";
-  document.getElementById("location").value = "";
-  document.getElementById("pay").value = "";
-  document.getElementById("contact").value = "";
-
-  alert("Job posted successfully ✅");
+  alert("Job posted!");
 };
 
-// live feed
-const q = query(
-  collection(db, "jobs"),
-  orderBy("featured", "desc"),
-  orderBy("createdAt", "desc")
-);
-
-onSnapshot(q, (snapshot) => {
+// LIVE JOBS
+onSnapshot(collection(db, "jobs"), (snapshot) => {
   const container = document.getElementById("jobs");
   container.innerHTML = "";
 
@@ -191,12 +156,12 @@ onSnapshot(q, (snapshot) => {
 
     container.innerHTML += `
       <div class="job ${job.featured ? 'featured' : ''}">
-        <h3>${job.featured ? '🔥 ' : ''}${job.title}</h3>
-        <p>${job.desc || ""}</p>
-        <p>📍 ${job.location || ""}</p>
-        <p>💰 ${job.pay || ""}</p>
+        <h3>${job.featured ? "🔥 " : ""}${job.title}</h3>
+        <p>${job.desc}</p>
+        <p>📍 ${job.location}</p>
+        <p>💰 ${job.pay}</p>
 
-        <a href="https://wa.me/${formatNumber(job.contact)}" target="_blank">
+        <a href="https://wa.me/${job.contact}" target="_blank">
           💬 Chat on WhatsApp
         </a>
       </div>
